@@ -16,6 +16,21 @@
 4. **Sequential Variables** - No meaningful names needed (v0, v1, g0, a0)
 5. **Explicit Control Flow** - Labels and jumps
 
+## Installation
+
+```bash
+# PyPI
+pip install sui-lang
+
+# Homebrew (macOS/Linux)
+brew tap TakatoHonda/sui
+brew install sui-lang
+
+# From source
+git clone https://github.com/TakatoHonda/sui-lang.git
+cd sui-lang
+```
+
 ## Quick Start
 
 ### Interpreter

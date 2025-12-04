@@ -16,6 +16,21 @@
 4. **連番変数** - 意味のある名前は不要（v0, v1, g0, a0）
 5. **明示的制御フロー** - ラベルとジャンプ
 
+## インストール
+
+```bash
+# PyPI
+pip install sui-lang
+
+# Homebrew (macOS/Linux)
+brew tap TakatoHonda/sui
+brew install sui-lang
+
+# ソースから
+git clone https://github.com/TakatoHonda/sui-lang.git
+cd sui-lang
+```
+
 ## クイックスタート
 
 ### インタプリタ
