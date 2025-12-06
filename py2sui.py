@@ -65,7 +65,7 @@ class Py2SuiTranspiler(ast.NodeVisitor):
                 self.emit(f"= {var} {node.value}")
             return var
 
-        elif isinstance(node, ast.Num):  # Python 3.7 and earlier
+        elif isinstance(node, ast.Constant):  # Python 3.7 and earlier
             var = self.new_var()
             self.emit(f"= {var} {node.n}")
             return var
