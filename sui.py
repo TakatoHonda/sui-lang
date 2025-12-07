@@ -8,6 +8,7 @@ import sys
 import importlib
 from dataclasses import dataclass, field
 from typing import Any, Optional
+from repl import run_repl
 
 
 @dataclass
@@ -425,6 +426,42 @@ class SuiInterpreter:
         return self.output
 
 
+    def run_snippet(self, code: str) -> list:
+        """
+        Execute code without resetting interpreter/global state (for REPL use).
+        """
+        # Keep vars/functions as-is, but clear transient state
+        self.output = []
+        self.context.returned = False
+        self.context.return_value = None
+        self.context_stack = []
+
+        lines = self.parse(code)
+
+        # Update/collect any new function definitions
+        self.collect_functions(lines)
+
+        # Execute non-function code
+        main_lines = []
+        i = 0
+        while i < len(lines):
+            if lines[i][0] == '#':
+                depth = 1
+                i += 1
+                while i < len(lines) and depth > 0:
+                    if lines[i][0] == '#' and len(lines[i]) > 3 and lines[i][-1] == '{':
+                        depth += 1
+                    elif lines[i][0] == '}':
+                        depth -= 1
+                    i += 1
+            else:
+                main_lines.append(lines[i])
+                i += 1
+
+        self.execute_block(main_lines)
+        return self.output
+
+
 def validate_line(line: str) -> tuple[bool, str]:
     """
     Validate a single line
@@ -473,6 +510,7 @@ def _print_help():
     print("  sui                 # Start REPL (default when no args)")
     print("  sui <file.sui> [args...]")
     print("  sui --help          # Show this help")
+    print("  sui --repl          # Force REPL mode")
     print("  sui --validate <file.sui>")
     print("")
     print("Argument access:")
@@ -542,6 +580,13 @@ $ g1 0 g0
 
 def main():
     args = sys.argv[1:]
+    if not args:
+        run_repl()
+        return
+    if args[0] in ('--repl', '-i'):
+        run_repl()
+        return
+
     if args[0] in ('--help', '-h'):
         _print_help()
         return
