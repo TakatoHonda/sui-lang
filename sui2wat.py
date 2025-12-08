@@ -15,12 +15,10 @@ class Sui2WatTranspiler:
         self.output: list[str] = []
         self.indent = 0
         self.functions: dict[int, dict] = {}
-        self.global_count = 0
-        self.local_count = 0
-        self.label_count = 0
         # Track used variables
         self.used_globals: set[int] = set()
-        self.used_locals: set[int] = set()
+        # Memory allocation pointer (for arrays)
+        self.use_memory = False
 
     def emit(self, line: str):
         """Emit a line with proper indentation"""
@@ -57,57 +55,188 @@ class Sui2WatTranspiler:
             i = j
         return tokens if tokens else None
 
-    def collect_variables(self, lines: list[list[str]]):
-        """Collect used variables"""
+    def collect_info(self, lines: list[list[str]]):
+        """Collect used variables and check if memory is needed"""
         for tokens in lines:
             if not tokens:
                 continue
+            op = tokens[0]
+            # Check if arrays are used
+            if op in ['[', ']', '{']:
+                self.use_memory = True
             for token in tokens[1:]:
-                if token.startswith('v'):
-                    try:
-                        self.used_locals.add(int(token[1:]))
-                    except ValueError:
-                        pass
-                elif token.startswith('g'):
+                if token.startswith('g'):
                     try:
                         self.used_globals.add(int(token[1:]))
                     except ValueError:
                         pass
 
-    def resolve_value(self, val: str) -> tuple[str, str]:
-        """
-        Resolve a value to WAT code
-        Returns: (WAT instruction, type)
-        """
+    def resolve_value(self, val: str) -> str:
+        """Resolve a value to WAT code"""
         if val.startswith('v'):
             idx = int(val[1:])
-            return f"(local.get $v{idx})", "i32"
+            return f"(local.get $v{idx})"
         elif val.startswith('g'):
             idx = int(val[1:])
-            return f"(global.get $g{idx})", "i32"
+            return f"(global.get $g{idx})"
         elif val.startswith('a'):
             idx = int(val[1:])
-            return f"(local.get $a{idx})", "i32"
+            return f"(local.get $a{idx})"
         elif val.startswith('"'):
-            # Strings not yet supported (requires memory operations)
-            return "(i32.const 0)", "i32"
+            # Strings not yet supported
+            return "(i32.const 0)"
         elif '.' in val:
-            return f"(f64.const {val})", "f64"
+            # Float - convert to int for now
+            return f"(i32.const {int(float(val))})"
         else:
             try:
-                return f"(i32.const {int(val)})", "i32"
+                return f"(i32.const {int(val)})"
             except ValueError:
-                return "(i32.const 0)", "i32"
+                return "(i32.const 0)"
 
-    def assign_value(self, var: str, value_code: str) -> str:
-        """Generate WAT instruction for variable assignment"""
+    def set_var(self, var: str) -> str:
+        """Generate WAT instruction to set a variable"""
         if var.startswith('v'):
             idx = int(var[1:])
-            return f"{value_code}\n    (local.set $v{idx})"
+            return f"(local.set $v{idx})"
         elif var.startswith('g'):
             idx = int(var[1:])
-            return f"{value_code}\n    (global.set $g{idx})"
+            return f"(global.set $g{idx})"
         return ""
+
+    def transpile_block(self, lines: list[list[str]], local_vars: set[int], is_function: bool = False) -> list[str]:
+        """
+        Transpile a block of instructions using state machine pattern for labels/jumps
+        """
+        result = []
+        
+        # Collect labels
+        labels: set[int] = set()
+        for tokens in lines:
+            if tokens and tokens[0] == ':':
+                labels.add(int(tokens[1]))
+
+        if labels:
+            # Use state machine pattern
+            # Map labels to state numbers
+            state_map: dict[int, int] = {}
+            state_num = 1
+            for label in sorted(labels):
+                state_map[label] = state_num
+                state_num += 1
+
+            # Group instructions by state
+            states: dict[int, list] = {0: []}
+            current_state = 0
+            
+            for tokens in lines:
+                if not tokens:
+                    continue
+                if tokens[0] == ':':
+                    label_id = int(tokens[1])
+                    current_state = state_map[label_id]
+                    if current_state not in states:
+                        states[current_state] = []
+                elif tokens[0] == '}':
+                    continue
+                else:
+                    if current_state not in states:
+                        states[current_state] = []
+                    states[current_state].append(tokens)
+
+            # Generate state machine
+            result.append("(local $_state i32)")
+            result.append("(local.set $_state (i32.const 0))")
+            result.append("(block $exit")
+            result.append("  (loop $loop")
+            
+            for state_id in sorted(states.keys()):
+                result.append(f"    ;; State {state_id}")
+                result.append(f"    (if (i32.eq (local.get $_state) (i32.const {state_id}))")
+                result.append("      (then")
+                
+                state_lines = states[state_id]
+                has_jump = False
+                
+                for tokens in state_lines:
+                    if tokens[0] == '?':
+                        # Conditional jump: ? cond label
+                        cond_code = self.resolve_value(tokens[1])
+                        target_label = int(tokens[2])
+                        target_state = state_map.get(target_label, 0)
+                        result.append(f"        {cond_code}")
+                        result.append(f"        (if")
+                        result.append(f"          (then")
+                        result.append(f"            (local.set $_state (i32.const {target_state}))")
+                        result.append(f"            (br $loop)")
+                        result.append(f"          )")
+                        result.append(f"        )")
+                    elif tokens[0] == '@':
+                        # Unconditional jump: @ label
+                        target_label = int(tokens[1])
+                        target_state = state_map.get(target_label, 0)
+                        result.append(f"        (local.set $_state (i32.const {target_state}))")
+                        result.append(f"        (br $loop)")
+                        has_jump = True
+                    elif tokens[0] == '^':
+                        # Return
+                        val_code = self.resolve_value(tokens[1])
+                        result.append(f"        {val_code}")
+                        result.append(f"        (return)")
+                        has_jump = True
+                    elif tokens[0] == '$':
+                        # Function call
+                        result_var = tokens[1]
+                        func_id = tokens[2]
+                        args = tokens[3:]
+                        for arg in args:
+                            result.append(f"        {self.resolve_value(arg)}")
+                        result.append(f"        (call $f{func_id})")
+                        result.append(f"        {self.set_var(result_var)}")
+                    else:
+                        # Other instructions
+                        insts = self.transpile_instruction(tokens)
+                        for inst in insts:
+                            result.append(f"        {inst}")
+                
+                # State transition
+                if not has_jump:
+                    next_state = state_id + 1
+                    if next_state in states:
+                        result.append(f"        (local.set $_state (i32.const {next_state}))")
+                        result.append(f"        (br $loop)")
+                    else:
+                        result.append(f"        (br $exit)")
+                
+                result.append("      )")
+                result.append("    )")
+            
+            result.append("    (br $exit)")
+            result.append("  )")
+            result.append(")")
+        else:
+            # No labels - simple sequential execution
+            for tokens in lines:
+                if not tokens or tokens[0] == '}':
+                    continue
+                if tokens[0] == '^':
+                    val_code = self.resolve_value(tokens[1])
+                    result.append(val_code)
+                    result.append("(return)")
+                elif tokens[0] == '$':
+                    result_var = tokens[1]
+                    func_id = tokens[2]
+                    args = tokens[3:]
+                    for arg in args:
+                        result.append(self.resolve_value(arg))
+                    result.append(f"(call $f{func_id})")
+                    result.append(self.set_var(result_var))
+                else:
+                    insts = self.transpile_instruction(tokens)
+                    for inst in insts:
+                        result.append(inst)
+
+        return result
 
     def transpile_instruction(self, tokens: list[str]) -> list[str]:
         """Transpile a single instruction to WAT"""
@@ -119,20 +248,14 @@ class Sui2WatTranspiler:
 
         if op == '=':
             # Assignment: = var val
-            val_code, _ = self.resolve_value(tokens[2])
-            if tokens[1].startswith('v'):
-                idx = int(tokens[1][1:])
-                result.append(f"{val_code}")
-                result.append(f"(local.set $v{idx})")
-            elif tokens[1].startswith('g'):
-                idx = int(tokens[1][1:])
-                result.append(f"{val_code}")
-                result.append(f"(global.set $g{idx})")
+            val_code = self.resolve_value(tokens[2])
+            result.append(val_code)
+            result.append(self.set_var(tokens[1]))
 
         elif op in ['+', '-', '*', '/', '%']:
             # Arithmetic: op result a b
-            a_code, _ = self.resolve_value(tokens[2])
-            b_code, _ = self.resolve_value(tokens[3])
+            a_code = self.resolve_value(tokens[2])
+            b_code = self.resolve_value(tokens[3])
             
             op_map = {
                 '+': 'i32.add',
@@ -142,110 +265,96 @@ class Sui2WatTranspiler:
                 '%': 'i32.rem_s'
             }
             
-            result.append(f"{a_code}")
-            result.append(f"{b_code}")
+            result.append(a_code)
+            result.append(b_code)
             result.append(f"({op_map[op]})")
-            
-            if tokens[1].startswith('v'):
-                idx = int(tokens[1][1:])
-                result.append(f"(local.set $v{idx})")
-            elif tokens[1].startswith('g'):
-                idx = int(tokens[1][1:])
-                result.append(f"(global.set $g{idx})")
+            result.append(self.set_var(tokens[1]))
 
         elif op == '<':
             # Less than: < result a b
-            a_code, _ = self.resolve_value(tokens[2])
-            b_code, _ = self.resolve_value(tokens[3])
-            result.append(f"{a_code}")
-            result.append(f"{b_code}")
+            result.append(self.resolve_value(tokens[2]))
+            result.append(self.resolve_value(tokens[3]))
             result.append("(i32.lt_s)")
-            if tokens[1].startswith('v'):
-                idx = int(tokens[1][1:])
-                result.append(f"(local.set $v{idx})")
-            elif tokens[1].startswith('g'):
-                idx = int(tokens[1][1:])
-                result.append(f"(global.set $g{idx})")
+            result.append(self.set_var(tokens[1]))
 
         elif op == '>':
             # Greater than: > result a b
-            a_code, _ = self.resolve_value(tokens[2])
-            b_code, _ = self.resolve_value(tokens[3])
-            result.append(f"{a_code}")
-            result.append(f"{b_code}")
+            result.append(self.resolve_value(tokens[2]))
+            result.append(self.resolve_value(tokens[3]))
             result.append("(i32.gt_s)")
-            if tokens[1].startswith('v'):
-                idx = int(tokens[1][1:])
-                result.append(f"(local.set $v{idx})")
-            elif tokens[1].startswith('g'):
-                idx = int(tokens[1][1:])
-                result.append(f"(global.set $g{idx})")
+            result.append(self.set_var(tokens[1]))
 
         elif op == '~':
             # Equality: ~ result a b
-            a_code, _ = self.resolve_value(tokens[2])
-            b_code, _ = self.resolve_value(tokens[3])
-            result.append(f"{a_code}")
-            result.append(f"{b_code}")
+            result.append(self.resolve_value(tokens[2]))
+            result.append(self.resolve_value(tokens[3]))
             result.append("(i32.eq)")
-            if tokens[1].startswith('v'):
-                idx = int(tokens[1][1:])
-                result.append(f"(local.set $v{idx})")
-            elif tokens[1].startswith('g'):
-                idx = int(tokens[1][1:])
-                result.append(f"(global.set $g{idx})")
+            result.append(self.set_var(tokens[1]))
 
         elif op == '!':
             # NOT: ! result a
-            a_code, _ = self.resolve_value(tokens[2])
-            result.append(f"{a_code}")
+            result.append(self.resolve_value(tokens[2]))
             result.append("(i32.eqz)")
-            if tokens[1].startswith('v'):
-                idx = int(tokens[1][1:])
-                result.append(f"(local.set $v{idx})")
-            elif tokens[1].startswith('g'):
-                idx = int(tokens[1][1:])
-                result.append(f"(global.set $g{idx})")
+            result.append(self.set_var(tokens[1]))
 
         elif op == '&':
             # AND: & result a b
-            a_code, _ = self.resolve_value(tokens[2])
-            b_code, _ = self.resolve_value(tokens[3])
-            result.append(f"{a_code}")
-            result.append(f"{b_code}")
+            result.append(self.resolve_value(tokens[2]))
+            result.append(self.resolve_value(tokens[3]))
             result.append("(i32.and)")
-            if tokens[1].startswith('v'):
-                idx = int(tokens[1][1:])
-                result.append(f"(local.set $v{idx})")
-            elif tokens[1].startswith('g'):
-                idx = int(tokens[1][1:])
-                result.append(f"(global.set $g{idx})")
+            result.append(self.set_var(tokens[1]))
 
         elif op == '|':
             # OR: | result a b
-            a_code, _ = self.resolve_value(tokens[2])
-            b_code, _ = self.resolve_value(tokens[3])
-            result.append(f"{a_code}")
-            result.append(f"{b_code}")
+            result.append(self.resolve_value(tokens[2]))
+            result.append(self.resolve_value(tokens[3]))
             result.append("(i32.or)")
-            if tokens[1].startswith('v'):
-                idx = int(tokens[1][1:])
-                result.append(f"(local.set $v{idx})")
-            elif tokens[1].startswith('g'):
-                idx = int(tokens[1][1:])
-                result.append(f"(global.set $g{idx})")
-
-        elif op == '^':
-            # Return: ^ value
-            val_code, _ = self.resolve_value(tokens[1])
-            result.append(f"{val_code}")
-            result.append("(return)")
+            result.append(self.set_var(tokens[1]))
 
         elif op == '.':
-            # Output: . value (external function call)
-            val_code, _ = self.resolve_value(tokens[1])
-            result.append(f"{val_code}")
+            # Output: . value
+            result.append(self.resolve_value(tokens[1]))
             result.append("(call $print_i32)")
+
+        elif op == '[':
+            # Array create: [ var size
+            # Store base address in var, allocate size*4 bytes
+            # Use global $heap_ptr for allocation
+            size_code = self.resolve_value(tokens[2])
+            result.append("(global.get $heap_ptr)")  # Current heap pointer = array base
+            result.append(self.set_var(tokens[1]))   # Store in var
+            result.append("(global.get $heap_ptr)")  # Get current heap ptr
+            result.append(size_code)                  # Size
+            result.append("(i32.const 4)")           # 4 bytes per element
+            result.append("(i32.mul)")               # size * 4
+            result.append("(i32.add)")               # new heap ptr
+            result.append("(global.set $heap_ptr)")  # Update heap ptr
+            self.use_memory = True
+
+        elif op == ']':
+            # Array read: ] result arr idx
+            # result = memory[arr + idx * 4]
+            result.append(self.resolve_value(tokens[2]))  # arr base
+            result.append(self.resolve_value(tokens[3]))  # idx
+            result.append("(i32.const 4)")
+            result.append("(i32.mul)")
+            result.append("(i32.add)")                    # arr + idx * 4
+            result.append("(i32.load)")                   # Load from memory
+            result.append(self.set_var(tokens[1]))
+            self.use_memory = True
+
+        elif op == '{':
+            # Array write: { arr idx val
+            # memory[arr + idx * 4] = val
+            if len(tokens) >= 4:
+                result.append(self.resolve_value(tokens[1]))  # arr base
+                result.append(self.resolve_value(tokens[2]))  # idx
+                result.append("(i32.const 4)")
+                result.append("(i32.mul)")
+                result.append("(i32.add)")                    # arr + idx * 4
+                result.append(self.resolve_value(tokens[3]))  # val
+                result.append("(i32.store)")                  # Store to memory
+                self.use_memory = True
 
         return result
 
@@ -273,12 +382,10 @@ class Sui2WatTranspiler:
         for v in sorted(local_vars):
             result.append(f"  (local $v{v} i32)")
         
-        # Function body
-        for tokens in body:
-            if tokens and tokens[0] != '}':
-                instructions = self.transpile_instruction(tokens)
-                for inst in instructions:
-                    result.append(f"  {inst}")
+        # Function body using state machine
+        body_code = self.transpile_block(body, local_vars, is_function=True)
+        for line in body_code:
+            result.append(f"  {line}")
         
         # Default return value
         result.append("  (i32.const 0)")
@@ -290,7 +397,8 @@ class Sui2WatTranspiler:
         """Transpile Sui code to WAT"""
         self.output = []
         self.used_globals = set()
-        self.used_locals = set()
+        self.use_memory = False
+        self.functions = {}
         
         lines_raw = code.strip().split('\n')
         lines = []
@@ -299,8 +407,8 @@ class Sui2WatTranspiler:
             if parsed:
                 lines.append(parsed)
 
-        # Collect variables
-        self.collect_variables(lines)
+        # Collect info
+        self.collect_info(lines)
 
         # Collect functions
         i = 0
@@ -321,11 +429,20 @@ class Sui2WatTranspiler:
                     body.append(lines[i])
                     i += 1
                 self.functions[func_id] = {'argc': argc, 'body': body}
+                # Also collect info from function body
+                self.collect_info(body)
             i += 1
 
         # WAT output start
         self.emit("(module")
         self.indent += 1
+
+        # Memory (if needed)
+        if self.use_memory:
+            self.emit(";; Linear memory for arrays")
+            self.emit("(memory 1)")  # 1 page = 64KB
+            self.emit("(global $heap_ptr (mut i32) (i32.const 0))")
+            self.emit("")
 
         # Import (print function)
         self.emit(";; External function imports")
@@ -357,7 +474,7 @@ class Sui2WatTranspiler:
         self.emit("(func $main (export \"main\") (result i32)")
         self.indent += 1
 
-        # Local variables used in main
+        # Collect main lines and local variables
         main_locals: set[int] = set()
         main_lines = []
         i = 0
@@ -386,28 +503,9 @@ class Sui2WatTranspiler:
             self.emit(f"(local $v{v} i32)")
 
         # Main body
-        for tokens in main_lines:
-            if tokens[0] == '$':
-                # Function call: $ result func_id args...
-                result_var = tokens[1]
-                func_id = tokens[2]
-                args = tokens[3:]
-                
-                for arg in args:
-                    val_code, _ = self.resolve_value(arg)
-                    self.emit(val_code)
-                self.emit(f"(call $f{func_id})")
-                
-                if result_var.startswith('v'):
-                    idx = int(result_var[1:])
-                    self.emit(f"(local.set $v{idx})")
-                elif result_var.startswith('g'):
-                    idx = int(result_var[1:])
-                    self.emit(f"(global.set $g{idx})")
-            else:
-                instructions = self.transpile_instruction(tokens)
-                for inst in instructions:
-                    self.emit(inst)
+        body_code = self.transpile_block(main_lines, main_locals)
+        for line in body_code:
+            self.emit(line)
 
         # Return value
         self.emit("(i32.const 0)")
@@ -432,15 +530,28 @@ def main():
         print("Then convert to binary with wat2wasm:")
         print("  wat2wasm out.wat -o out.wasm")
         print("")
+        print("Features:")
+        print("  - Basic arithmetic (+, -, *, /, %)")
+        print("  - Comparisons (<, >, ~)")
+        print("  - Logic (!, &, |)")
+        print("  - Labels and jumps (:, @, ?)")
+        print("  - Arrays ([, ], {)")
+        print("  - Functions (#, $, ^)")
+        print("")
         print("Sample:")
         print("-" * 50)
 
         sample = """
-= g0 10
-+ g1 g0 5
-. g1
+= v0 1
+: 0
+> v1 v0 10
+? v1 1
+. v0
++ v0 v0 1
+@ 0
+: 1
 """
-        print("Sui:")
+        print("Sui (loop 1-10):")
         print(sample.strip())
         print("")
         print("WAT:")
@@ -469,4 +580,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
