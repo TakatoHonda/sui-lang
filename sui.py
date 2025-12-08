@@ -476,28 +476,35 @@ def validate_line(line: str) -> tuple[bool, str]:
 
     op = tokens[0]
 
-    # Check argument count per instruction
-    arg_counts = {
+    # Valid instructions and their minimum argument counts
+    valid_ops = {
         '=': 2, '+': 3, '-': 3, '*': 3, '/': 3, '%': 3,
         '<': 3, '>': 3, '~': 3, '!': 2, '&': 3, '|': 3,
         '?': 2, '@': 1, ':': 1, '^': 1, '.': 1, ',': 1,
-        '[': 2, ']': 3, '}': 0, 'P': 2  # P requires at least result and func_path
+        '[': 2, ']': 3, '{': 3, '}': 0, '#': 3, '$': 2, 'P': 2
     }
 
+    # Check if instruction is valid
+    if op not in valid_ops:
+        return False, f"Unknown instruction: '{op}'"
+
+    # Special case: function definition
     if op == '#':
         if len(tokens) < 4 or tokens[-1] != '{':
             return False, "Function definition must be '# id argc {'"
         return True, ""
 
-    if op == '{' and len(tokens) >= 4:
-        # Array write
+    # Special case: function call (variable args)
+    if op == '$':
+        if len(tokens) < 3:
+            return False, "'$' requires at least result and function id"
         return True, ""
 
-    if op in arg_counts:
-        expected = arg_counts[op]
-        actual = len(tokens) - 1
-        if actual < expected:
-            return False, f"'{op}' requires {expected} arguments, got {actual}"
+    # Check argument count
+    expected = valid_ops[op]
+    actual = len(tokens) - 1
+    if actual < expected:
+        return False, f"'{op}' requires {expected} arguments, got {actual}"
 
     return True, ""
 

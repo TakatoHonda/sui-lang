@@ -327,3 +327,13 @@ class TestValidation:
         valid, msg = validate_line("")
         assert valid is True
 
+    def test_invalid_unknown_instruction(self):
+        valid, msg = validate_line(".v1")
+        assert valid is False
+        assert "Unknown instruction" in msg
+
+    def test_invalid_typo_instruction(self):
+        valid, msg = validate_line("abc v0 v1")
+        assert valid is False
+        assert "Unknown instruction" in msg
+

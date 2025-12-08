@@ -28,7 +28,7 @@ def run_repl():
         pass
 
     # Local import to avoid circular dependency at module load time
-    from sui import SuiInterpreter
+    from sui import SuiInterpreter, validate_line
 
     print("Sui REPL (empty line to execute, .exit / .quit / .reset)")
     interp = SuiInterpreter()
@@ -69,6 +69,18 @@ def run_repl():
             buffer = []
             if not code:
                 continue
+
+            # Validate each line before execution
+            has_error = False
+            for i, code_line in enumerate(code.split('\n'), 1):
+                is_valid, error_msg = validate_line(code_line)
+                if not is_valid:
+                    print(f"Error (line {i}): {error_msg}", file=sys.stderr)
+                    has_error = True
+
+            if has_error:
+                continue
+
             try:
                 interp.run_snippet(code)
             except Exception as e:
