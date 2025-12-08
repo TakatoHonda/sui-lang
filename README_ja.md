@@ -33,12 +33,26 @@ cd sui-lang
 
 ## クイックスタート
 
+### インタラクティブモード (REPL)
+
+```bash
+# REPL起動
+sui
+
+# セッション例
+>>> = v0 10
+>>> + v1 v0 5
+>>> . v1
+>>>
+15
+>>> .exit
+```
+
+コマンド: `.exit` / `.quit` (終了), `.reset` (状態リセット)
+
 ### インタプリタ
 
 ```bash
-# サンプル実行（デモを表示）
-sui
-
 # ファイル実行
 sui examples/fibonacci.sui
 
@@ -47,6 +61,9 @@ sui examples/fib_args.sui 15
 
 # バリデーション
 sui --validate examples/fibonacci.sui
+
+# ヘルプ表示
+sui --help
 ```
 
 ### トランスパイラ（Sui → Python）
@@ -293,6 +310,7 @@ SuiはLLMによるコード生成のために設計されている。`prompts/` 
 
 - [x] トランスパイラ（Python出力）
 - [x] トランスパイラ（Python入力、人間向け）
+- [x] インタラクティブモード (REPL)
 - [ ] トランスパイラ（JavaScript出力）
 - [ ] 型注釈（オプション）
 - [ ] LLVM IR出力

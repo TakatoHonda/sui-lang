@@ -33,12 +33,26 @@ cd sui-lang
 
 ## Quick Start
 
+### Interactive Mode (REPL)
+
+```bash
+# Start REPL
+sui
+
+# Example session
+>>> = v0 10
+>>> + v1 v0 5
+>>> . v1
+>>>
+15
+>>> .exit
+```
+
+Commands: `.exit` / `.quit` (exit), `.reset` (reset state)
+
 ### Interpreter
 
 ```bash
-# Run sample (shows demo)
-sui
-
 # Run file
 sui examples/fibonacci.sui
 
@@ -47,6 +61,9 @@ sui examples/fib_args.sui 15
 
 # Validate
 sui --validate examples/fibonacci.sui
+
+# Show help
+sui --help
 ```
 
 ### Transpiler (Sui → Python)
@@ -268,6 +285,7 @@ See [prompts/examples.md](prompts/examples.md) for prompt templates and expected
 
 - [x] Transpiler (Python output)
 - [x] Transpiler (Python input, for humans)
+- [x] Interactive mode (REPL)
 - [ ] Transpiler (JavaScript output)
 - [ ] Type annotations (optional)
 - [ ] LLVM IR output
