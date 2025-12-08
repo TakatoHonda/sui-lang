@@ -30,7 +30,7 @@ def run_repl():
     # Local import to avoid circular dependency at module load time
     from sui import SuiInterpreter
 
-    print("Sui REPL (空行で実行、.exit / .quit / .reset)")
+    print("Sui REPL (empty line to execute, .exit / .quit / .reset)")
     interp = SuiInterpreter()
     buffer: list[str] = []
     prompt = ">>> "
@@ -52,7 +52,7 @@ def run_repl():
             break
         if not buffer and stripped == '.reset':
             interp = SuiInterpreter()
-            print("状態をリセットしました。")
+            print("State reset.")
             continue
 
         # Skip pure empty line when there is nothing buffered

@@ -55,7 +55,7 @@ class TestRunRepl:
     def test_reset_creates_fresh_interpreter(self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]):
         _run_repl_script(monkeypatch, [".reset", '. "one"', "", ".quit"])
         captured = capsys.readouterr()
-        assert "状態をリセットしました。" in captured.out
+        assert "State reset." in captured.out
         assert "one" in captured.out
 
     def test_block_prompt_switches_to_continuation(self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]):
