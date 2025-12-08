@@ -210,17 +210,3 @@ class TestExampleFiles:
         )
         assert result.returncode == 0
         assert "8" in result.stdout
-
-    def test_ffi_demo_example(self, examples_dir):
-        """Test ffi_demo.sui"""
-        result = subprocess.run(
-            [sys.executable, 'sui.py', os.path.join(examples_dir, 'ffi_demo.sui')],
-            capture_output=True,
-            text=True,
-            cwd=os.path.dirname(os.path.dirname(__file__)),
-            timeout=5
-        )
-        assert result.returncode == 0
-        assert "4.0" in result.stdout  # sqrt(16)
-        assert "1024" in result.stdout  # pow(2,10)
-

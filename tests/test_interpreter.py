@@ -247,35 +247,6 @@ class TestStrings:
         assert result == ["Hello World"]
 
 
-class TestFFI:
-    """Test Python FFI"""
-
-    def test_ffi_sqrt(self):
-        interp = SuiInterpreter()
-        result = interp.run('P g0 "math.sqrt" 16\n. g0')
-        assert result == [4.0]
-
-    def test_ffi_len(self):
-        interp = SuiInterpreter()
-        result = interp.run('P g0 "len" "hello"\n. g0')
-        assert result == [5]
-
-    def test_ffi_abs(self):
-        interp = SuiInterpreter()
-        result = interp.run('P g0 "abs" -42\n. g0')
-        assert result == [42]
-
-    def test_ffi_max(self):
-        interp = SuiInterpreter()
-        result = interp.run('P g0 "max" 1 5 3\n. g0')
-        assert result == [5]
-
-    def test_ffi_round(self):
-        interp = SuiInterpreter()
-        result = interp.run('P g0 "round" 3.14159 2\n. g0')
-        assert result == [3.14]
-
-
 class TestCommandLineArgs:
     """Test command-line argument handling"""
 

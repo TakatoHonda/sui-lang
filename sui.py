@@ -5,7 +5,6 @@ A line-based programming language optimized for LLM code generation
 """
 
 import sys
-import importlib
 from dataclasses import dataclass, field
 from typing import Any, Optional
 from repl import run_repl
@@ -302,51 +301,7 @@ class SuiInterpreter:
                     pass
             self.assign(tokens[1], val)
 
-        elif op == 'P':
-            # Python FFI: P result "module.func" args...
-            result_var = tokens[1]
-            func_path = self.resolve(tokens[2])
-            call_args = [self.resolve(a) for a in tokens[3:]]
-
-            try:
-                result = self._call_python(func_path, call_args)
-                self.assign(result_var, result)
-            except Exception as e:
-                print(f"FFI Error: {e}", file=sys.stderr)
-                self.assign(result_var, None)
-
         return True, None
-
-    def _call_python(self, func_path: str, args: list) -> Any:
-        """
-        Call a Python function by path
-        Examples:
-            "len" -> len
-            "math.sqrt" -> math.sqrt
-            "json.loads" -> json.loads
-            "os.path.exists" -> os.path.exists
-        """
-        parts = func_path.rsplit('.', 1)
-
-        if len(parts) == 1:
-            # Builtin function
-            func = getattr(__builtins__, func_path, None)
-            if func is None:
-                func = eval(func_path)
-        else:
-            # Module function
-            module_path, func_name = parts
-            
-            # Handle nested modules (e.g., os.path.exists)
-            module_parts = module_path.split('.')
-            module = importlib.import_module(module_parts[0])
-            
-            for part in module_parts[1:]:
-                module = getattr(module, part)
-            
-            func = getattr(module, func_name)
-
-        return func(*args)
 
     def execute_block(self, lines: list[list[str]]):
         """Execute a block of instructions"""
@@ -481,7 +436,7 @@ def validate_line(line: str) -> tuple[bool, str]:
         '=': 2, '+': 3, '-': 3, '*': 3, '/': 3, '%': 3,
         '<': 3, '>': 3, '~': 3, '!': 2, '&': 3, '|': 3,
         '?': 2, '@': 1, ':': 1, '^': 1, '.': 1, ',': 1,
-        '[': 2, ']': 3, '{': 3, '}': 0, '#': 3, '$': 2, 'P': 2
+        '[': 2, ']': 3, '{': 3, '}': 0, '#': 3, '$': 2
     }
 
     # Check if instruction is valid

@@ -374,9 +374,9 @@ class Sui2WatTranspiler:
                     except ValueError:
                         pass
 
-        # Function signature
+        # Function signature (exported for external access)
         params = " ".join(f"(param $a{i} i32)" for i in range(argc))
-        result.append(f"(func $f{func_id} {params} (result i32)")
+        result.append(f'(func $f{func_id} (export "f{func_id}") {params} (result i32)')
         
         # Local variable declarations
         for v in sorted(local_vars):
@@ -449,11 +449,11 @@ class Sui2WatTranspiler:
             self.emit("(global $heap_ptr (mut i32) (i32.const 0))")
             self.emit("")
 
-        # Global variables
+        # Global variables (exported for JS binding)
         if self.used_globals:
             self.emit(";; Global variables")
             for g in sorted(self.used_globals):
-                self.emit(f"(global $g{g} (mut i32) (i32.const 0))")
+                self.emit(f"(global $g{g} (export \"g{g}\") (mut i32) (i32.const 0))")
             self.emit("")
 
         # Function definitions
