@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sui-lang"
-version = "0.1.1"
+version = "0.2.0"
 description = "A programming language optimized for LLM code generation"
 readme = "README.md"
 license = {text = "MIT"}
