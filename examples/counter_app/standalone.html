@@ -1,54 +1,182 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>Sui Counter App (Standalone)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>粋 Counter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@300;500;700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --ink: #1a1a1a;
+      --paper: #f5f2eb;
+      --accent: #c41e3a;
+      --shadow: rgba(0, 0, 0, 0.08);
+    }
+    
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    
     body {
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-      color: #eee;
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      background: var(--paper);
+      color: var(--ink);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      position: relative;
+      overflow: hidden;
     }
-    h1 { font-size: 1.5rem; margin-bottom: 2rem; color: #00d9ff; }
+    
+    /* Subtle grid pattern */
+    body::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: 
+        linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+    
+    .container {
+      text-align: center;
+      padding: 4rem;
+      background: white;
+      border-radius: 2px;
+      box-shadow: 
+        0 1px 3px var(--shadow),
+        0 10px 40px var(--shadow);
+      position: relative;
+      min-width: 320px;
+    }
+    
+    /* Red accent line */
+    .container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 3px;
+      background: var(--accent);
+    }
+    
+    h1 {
+      font-size: 0.875rem;
+      font-weight: 300;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 2rem;
+    }
+    
     .counter {
-      font-size: 6rem;
-      font-weight: bold;
-      margin: 2rem 0;
-      color: #fff;
-      text-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
+      font-size: 7rem;
+      font-weight: 700;
+      line-height: 1;
+      margin: 1.5rem 0;
+      font-feature-settings: 'tnum';
+      transition: transform 0.1s ease;
     }
-    .buttons { display: flex; gap: 1rem; }
+    
+    .counter.bump {
+      transform: scale(1.05);
+    }
+    
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 2.5rem;
+    }
+    
     button {
-      font-size: 2rem;
-      padding: 1rem 2rem;
-      border: none;
-      border-radius: 12px;
+      width: 56px;
+      height: 56px;
+      border: 1px solid #ddd;
+      background: white;
+      border-radius: 50%;
+      font-size: 1.5rem;
       cursor: pointer;
-      transition: all 0.2s;
-      font-family: inherit;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--ink);
     }
-    button:hover { transform: scale(1.05); }
-    .inc { background: #00d9ff; color: #1a1a2e; }
-    .dec { background: #ff6b6b; color: #fff; }
-    .reset { background: #4a4a6a; color: #fff; font-size: 1rem; padding: 0.5rem 1rem; margin-top: 1rem; }
-    .badge { margin-top: 2rem; font-size: 0.8rem; color: #666; }
+    
+    button:hover {
+      border-color: var(--ink);
+      background: var(--ink);
+      color: white;
+    }
+    
+    button:active {
+      transform: scale(0.95);
+    }
+    
+    .reset-wrapper {
+      display: flex;
+      justify-content: center;
+      margin-top: 2rem;
+    }
+    
+    .reset {
+      width: auto;
+      height: auto;
+      padding: 0.5rem 1.25rem;
+      border-radius: 2px;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    
+    .footer {
+      position: absolute;
+      bottom: 2rem;
+      font-size: 0.7rem;
+      color: #bbb;
+      letter-spacing: 0.05em;
+    }
+    
+    .footer a {
+      color: inherit;
+      text-decoration: none;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    .badge {
+      display: inline-block;
+      margin-left: 0.5rem;
+      padding: 0.15rem 0.4rem;
+      background: #e8e8e8;
+      border-radius: 2px;
+      font-size: 0.6rem;
+    }
   </style>
 </head>
 <body>
-  <h1>粋 (Sui) Counter</h1>
-  <div class="counter" id="count">0</div>
-  <div class="buttons">
-    <button class="dec" id="dec">−</button>
-    <button class="inc" id="inc">+</button>
+  <div class="container">
+    <h1>粋 Counter</h1>
+    <div class="counter" id="count">0</div>
+    <div class="controls">
+      <button id="dec">−</button>
+      <button id="inc">+</button>
+    </div>
+    <div class="reset-wrapper">
+      <button class="reset" id="reset">Reset</button>
+    </div>
   </div>
-  <button class="reset" id="reset">Reset</button>
-  <div class="badge">✓ Standalone - works with file://</div>
+  
+  <div class="footer">
+    Powered by <a href="https://github.com/TakatoHonda/sui-lang">Sui</a> + WebAssembly
+    <span class="badge">standalone</span>
+  </div>
 
   <script>
     // Wasm binary embedded as Base64
@@ -63,16 +191,20 @@
     }).then(({ instance }) => {
       const { f0, f1, f2, g0, main } = instance.exports;
       const countEl = document.getElementById('count');
-      const update = () => countEl.textContent = g0.value;
+      
+      const update = () => {
+        countEl.textContent = g0.value;
+        countEl.classList.add('bump');
+        setTimeout(() => countEl.classList.remove('bump'), 100);
+      };
       
       document.getElementById('inc').onclick = () => { f0(); update(); };
       document.getElementById('dec').onclick = () => { f1(); update(); };
       document.getElementById('reset').onclick = () => { f2(); update(); };
       
       main();
-      update();
+      countEl.textContent = g0.value;
     });
   </script>
 </body>
 </html>
-
