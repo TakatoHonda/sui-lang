@@ -19,8 +19,11 @@
 ## Installation
 
 ```bash
-# PyPI
+# PyPI (basic)
 pip install sui-lang
+
+# PyPI with WebAssembly support
+pip install sui-lang[wasm]
 
 # Homebrew (macOS/Linux)
 brew tap TakatoHonda/sui
@@ -87,6 +90,17 @@ py2sui your_code.py
 
 # Output to file
 py2sui your_code.py -o output.sui
+```
+
+### WebAssembly
+
+```bash
+# Transpile to WebAssembly Text Format (WAT)
+sui2wat examples/fibonacci.sui
+sui2wat examples/fibonacci.sui -o fib.wat
+
+# Execute directly via WebAssembly (requires: pip install sui-lang[wasm])
+suiwasm examples/fibonacci.sui
 ```
 
 ### Running without Installation (from source)
@@ -226,6 +240,8 @@ sui/
 ├── LICENSE             # MIT License
 ├── sui.py              # Interpreter
 ├── sui2py.py           # Sui → Python transpiler
+├── sui2wat.py          # Sui → WebAssembly Text Format transpiler
+├── suiwasm.py          # WebAssembly runtime (execute via wasmtime)
 ├── py2sui.py           # Python → Sui transpiler (for humans)
 ├── examples/
 │   ├── fibonacci.sui
@@ -286,10 +302,10 @@ See [prompts/examples.md](prompts/examples.md) for prompt templates and expected
 - [x] Transpiler (Python output)
 - [x] Transpiler (Python input, for humans)
 - [x] Interactive mode (REPL)
+- [x] WebAssembly output (WAT transpiler + runtime)
 - [ ] Transpiler (JavaScript output)
 - [ ] Type annotations (optional)
 - [ ] LLVM IR output
-- [ ] WebAssembly output
 
 ## License
 

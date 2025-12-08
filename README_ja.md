@@ -19,8 +19,11 @@
 ## インストール
 
 ```bash
-# PyPI
+# PyPI（基本）
 pip install sui-lang
+
+# PyPI（WebAssemblyサポート付き）
+pip install sui-lang[wasm]
 
 # Homebrew (macOS/Linux)
 brew tap TakatoHonda/sui
@@ -87,6 +90,17 @@ py2sui your_code.py
 
 # ファイルに出力
 py2sui your_code.py -o output.sui
+```
+
+### WebAssembly
+
+```bash
+# WebAssembly Text Format (WAT) に変換
+sui2wat examples/fibonacci.sui
+sui2wat examples/fibonacci.sui -o fib.wat
+
+# WebAssemblyで直接実行（要: pip install sui-lang[wasm]）
+suiwasm examples/fibonacci.sui
 ```
 
 ### インストールせずに実行（ソースから）
@@ -251,6 +265,8 @@ sui/
 ├── LICENSE             # MITライセンス
 ├── sui.py              # インタプリタ
 ├── sui2py.py           # Sui → Python トランスパイラ
+├── sui2wat.py          # Sui → WebAssembly Text Format トランスパイラ
+├── suiwasm.py          # WebAssemblyランタイム（wasmtimeで実行）
 ├── py2sui.py           # Python → Sui トランスパイラ（人間向け）
 ├── examples/
 │   ├── fibonacci.sui
@@ -311,10 +327,10 @@ SuiはLLMによるコード生成のために設計されている。`prompts/` 
 - [x] トランスパイラ（Python出力）
 - [x] トランスパイラ（Python入力、人間向け）
 - [x] インタラクティブモード (REPL)
+- [x] WebAssembly出力（WATトランスパイラ + ランタイム）
 - [ ] トランスパイラ（JavaScript出力）
 - [ ] 型注釈（オプション）
 - [ ] LLVM IR出力
-- [ ] WebAssembly出力
 
 ## ライセンス
 
