@@ -11,6 +11,14 @@ import tempfile
 import os
 from typing import Optional
 
+def get_version() -> str:
+    """Get package version"""
+    try:
+        from importlib.metadata import version
+        return version("sui-lang")
+    except Exception:
+        return "0.4.1"
+
 
 class Sui2WatTranspiler:
     """Sui to WAT transpiler"""
@@ -496,16 +504,21 @@ def compile_to_wasm(sui_code: str) -> bytes | None:
 
 
 def main():
+    if len(sys.argv) >= 2 and sys.argv[1] in ('--version', '-V'):
+        print(f"sui-lang {get_version()}")
+        return
+    
     if len(sys.argv) < 2 or sys.argv[1] in ['-h', '--help']:
         print("Usage: sui2wasm <input.sui> [-o <output.wasm>]")
         print()
         print("Compile Sui code to WebAssembly binary.")
         print()
         print("Options:")
-        print("  -o FILE    Output file (default: input.wasm)")
+        print("  -o FILE      Output file (default: input.wasm)")
+        print("  --version    Show version")
         print()
         print("Requirements:")
-        print("  wat2wasm   Install via: brew install wabt")
+        print("  wat2wasm     Install via: brew install wabt")
         sys.exit(0 if '-h' in sys.argv or '--help' in sys.argv else 1)
     
     input_file = sys.argv[1]

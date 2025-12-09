@@ -15,6 +15,14 @@ except ImportError:
 
 from sui2wasm import Sui2WatTranspiler
 
+def get_version() -> str:
+    """Get package version"""
+    try:
+        from importlib.metadata import version
+        return version("sui-lang")
+    except Exception:
+        return "0.4.1"
+
 
 class SuiWasmRuntime:
     """Runtime for executing Sui code via WebAssembly"""
@@ -83,18 +91,23 @@ class SuiWasmRuntime:
 
 
 def main():
+    if len(sys.argv) >= 2 and sys.argv[1] in ('--version', '-V'):
+        print(f"sui-lang {get_version()}")
+        return
+    
     if not WASMTIME_AVAILABLE:
         print("Error: wasmtime is required")
         print("Install with: pip install wasmtime")
         sys.exit(1)
 
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 2 or sys.argv[1] in ('--help', '-h'):
         print("Sui (粋) WebAssembly Runtime")
         print("=" * 50)
         print("")
         print("Usage:")
-        print("  suiwasm <file.sui>      # Execute Sui file via WebAssembly")
+        print("  suiwasm <file.sui>       # Execute Sui file via WebAssembly")
         print("  suiwasm --wat <file.sui> # Show generated WAT code")
+        print("  suiwasm --version        # Show version")
         print("")
         print("This runtime:")
         print("  1. Transpiles Sui code to WebAssembly Text Format (WAT)")

@@ -8,6 +8,14 @@ import ast
 import sys
 from typing import Optional
 
+def get_version() -> str:
+    """Get package version"""
+    try:
+        from importlib.metadata import version
+        return version("sui-lang")
+    except Exception:
+        return "0.4.1"
+
 
 class Py2SuiTranspiler(ast.NodeVisitor):
     """Python to Sui transpiler"""
@@ -419,13 +427,18 @@ class Py2SuiTranspiler(ast.NodeVisitor):
 
 
 def main():
-    if len(sys.argv) < 2:
+    if len(sys.argv) >= 2 and sys.argv[1] in ('--version', '-V'):
+        print(f"sui-lang {get_version()}")
+        return
+    
+    if len(sys.argv) < 2 or sys.argv[1] in ('--help', '-h'):
         print("Python to Sui (粋) Transpiler (for humans)")
         print("=" * 50)
         print("")
         print("Usage:")
         print("  py2sui <file.py>            # Show converted code")
         print("  py2sui <file.py> -o out.sui # Output to file")
+        print("  py2sui --version            # Show version")
         print("")
         print("Sample:")
         print("-" * 50)

@@ -4,9 +4,16 @@ Sui (粋) to Python Transpiler
 Convert Sui code to Python code
 """
 
-import json
 import sys
 from typing import Union
+
+def get_version() -> str:
+    """Get package version"""
+    try:
+        from importlib.metadata import version
+        return version("sui-lang")
+    except Exception:
+        return "0.4.1"
 
 
 class Sui2PyTranspiler:
@@ -331,7 +338,11 @@ class Sui2PyTranspiler:
 
 
 def main():
-    if len(sys.argv) < 2:
+    if len(sys.argv) >= 2 and sys.argv[1] in ('--version', '-V'):
+        print(f"sui-lang {get_version()}")
+        return
+    
+    if len(sys.argv) < 2 or sys.argv[1] in ('--help', '-h'):
         print("Sui (粋) to Python Transpiler")
         print("=" * 50)
         print("")
@@ -339,6 +350,7 @@ def main():
         print("  sui2py <file.sui>           # Show converted code")
         print("  sui2py <file.sui> -o out.py # Output to file")
         print("  sui2py <file.sui> --run     # Convert and execute")
+        print("  sui2py --version            # Show version")
         print("")
         print("Sample:")
         print("-" * 50)

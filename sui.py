@@ -9,6 +9,14 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 from repl import run_repl
 
+def get_version() -> str:
+    """Get package version"""
+    try:
+        from importlib.metadata import version
+        return version("sui-lang")
+    except Exception:
+        return "0.4.1"
+
 
 @dataclass
 class Function:
@@ -545,6 +553,11 @@ def main():
     if not args:
         run_repl()
         return
+    
+    if args[0] in ('--version', '-V'):
+        print(f"sui-lang {get_version()}")
+        return
+    
     if args[0] in ('--repl', '-i'):
         run_repl()
         return
