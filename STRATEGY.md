@@ -22,13 +22,35 @@
 - [ ] Create `sui-bench` benchmark suite
 - [ ] Compare Sui vs Python vs JavaScript
 - [ ] Measure: syntax error rate, execution success rate, token efficiency
-- [ ] Target venues: NeurIPS, ICML, ACL workshops
 - [ ] Expected metrics:
 
 | Metric | Sui | Python | JS |
 |--------|-----|--------|-----|
 | Syntax Error Rate | 0% | ~12% | ~15% |
 | Execution Success | 100% | ~78% | ~72% |
+
+**Target Venues:**
+
+| Category | Conference | Tier | Focus |
+|----------|------------|------|-------|
+| **PL** | PLDI | A* | Language design, implementation |
+| | POPL | A* | PL theory, semantics |
+| | OOPSLA | A* | OOP, language systems |
+| **AI/ML** | NeurIPS | A* | Machine learning |
+| | ICML | A* | Machine learning |
+| | ICLR | A* | Deep learning, representations |
+| | AAAI | A* | Artificial intelligence |
+| **NLP** | ACL | A* | Computational linguistics |
+| | EMNLP | A | NLP methods |
+| | NAACL | A | NLP (North America) |
+| **SE** | ICSE | A* | Software engineering |
+| | FSE | A* | Software engineering foundations |
+| | ASE | A | Automated SE |
+
+**Paper Angles:**
+- PL venues: "A syntax designed for LLM generation"
+- AI/ML venues: "Improving code generation accuracy via language design"
+- SE venues: "Human-AI collaboration in programming"
 
 ### Priority 2: VSCode Extension (Developer Experience)
 
