@@ -4,7 +4,7 @@
 
 ---
 
-```
+````
 あなたはSuiを使ったアプリケーション開発者です。
 
 ## アーキテクチャ
@@ -160,4 +160,4 @@ export function Counter({ wasm }) {
 3. 状態はSuiのグローバル変数（g0, g1, ...）で管理
 4. UI操作はSuiの関数（f0, f1, ...）を呼び出す
 5. UIはWasmをfetchしてinstantiateする
-```
+````

@@ -4,7 +4,7 @@ System prompt for generating complete applications. Logic in Sui, UI in any fram
 
 ---
 
-```
+````
 You are an application developer using Sui.
 
 ## Architecture
@@ -160,4 +160,4 @@ export function Counter({ wasm }) {
 3. State is managed via Sui global variables (g0, g1, ...)
 4. UI operations call Sui functions (f0, f1, ...)
 5. UI fetches and instantiates Wasm
-```
+````
