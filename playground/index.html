@@ -408,6 +408,10 @@
           const idx = parseInt(token.slice(1));
           return args[idx] ?? 0;
         }
+        if (token.startsWith('c')) {
+          // Command-line args (not available in playground, always 0)
+          return 0;
+        }
         const num = parseFloat(token);
         return isNaN(num) ? 0 : (Number.isInteger(num) ? parseInt(token) : num);
       }
@@ -415,6 +419,8 @@
       assign(varName, value, locals) {
         if (varName.startsWith('g')) {
           this.globals[varName] = value;
+        } else if (varName.startsWith('c')) {
+          // Command-line args are read-only, ignore
         } else {
           locals[varName] = value;
         }
