@@ -507,6 +507,23 @@
             }
             case '^':
               return this.resolve(tokens[1], locals, args);
+            case '[':
+              const size = parseInt(this.resolve(tokens[2], locals, args));
+              this.assign(tokens[1], Array(size).fill(0), locals);
+              break;
+            case ']':
+              const arr = this.resolve(tokens[2], locals, args);
+              const idx = parseInt(this.resolve(tokens[3], locals, args));
+              const ok = Array.isArray(arr) && Number.isFinite(idx) && idx >= 0 && idx < arr.length;
+              this.assign(tokens[1], ok ? arr[idx] : 0, locals);
+              break;
+            case '{':
+              if (tokens.length >= 4) {
+                const arr = this.resolve(tokens[1], locals, args);
+                const idx = parseInt(this.resolve(tokens[2], locals, args));
+                const ok = Array.isArray(arr) && Number.isFinite(idx) && idx >= 0 && idx < arr.length;
+                if (ok) arr[idx] = this.resolve(tokens[3], locals, args);
+              }
           }
           pc++;
         }
