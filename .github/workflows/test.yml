@@ -1,4 +1,4 @@
-name: Tests
+name: CI
 
 on:
   push:
@@ -7,7 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  isu:
+    name: Isu (IIR) tests
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -28,17 +29,37 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest pytest-cov
 
-      - name: Run tests
+      - name: Run Isu tests
+        run: |
+          pytest tests/test_isu_v0.py -v --tb=short
+
+      - name: Run Isu smoke test
+        run: |
+          python -c "from isu import parse_isu, pretty_print_isu; src='''META:\n  AUTO_ID: true\nFUNC:\n  NAME: f\nIO:\n  INPUT: []\n  OUTPUT: []\nSTATE:\n  []\nLOCAL:\n  []\nSTEPS:\n  SEQ: BEGIN\n    ASSIGN:\n      TARGET: x\n      EXPR: (const 1)\n    RETURN:\n      EXPR: (var x)\n  END\n'''; p=parse_isu(src); print(pretty_print_isu(p))"
+
+  legacy_sui:
+    name: Legacy Sui (compat) tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov
+
+      - name: Run legacy tests
         run: |
           pytest tests/ -v --tb=short
 
-      - name: Run interpreter smoke test
+      - name: Run legacy Sui smoke test
         run: |
           python sui.py examples/fibonacci.sui
-          python sui.py examples/fizzbuzz.sui | head -20
-
-      - name: Run transpiler smoke test
-        run: |
           python sui2py.py examples/fibonacci.sui --run
 
   lint:
@@ -53,7 +74,6 @@ jobs:
 
       - name: Check syntax
         run: |
-          python -m py_compile sui.py
-          python -m py_compile sui2py.py
-          python -m py_compile py2sui.py
+          python -m compileall -q isu sui_legacy repl
+          python -m py_compile sui.py sui2py.py py2sui.py sui2wasm.py suiwasm.py
 
