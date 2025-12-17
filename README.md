@@ -2,7 +2,7 @@
 
 This repository is shifting its primary focus from the original line-based **Sui** language to **Isu**, a structured pseudocode designed for deterministic parsing and step-level repair loops.
 
-[日本語版 README](README_ja.md)
+[日本語版 README](README_ja.md) [简体中文版 README](README_zh_CN.md)
 
 ## Status
 
